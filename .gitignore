@@ -1,0 +1,14 @@
+# Large image datasets and vector index
+data/images/
+data/index/
+*.index
+
+# Python artifacts
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/

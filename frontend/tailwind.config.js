@@ -1,11 +1,2 @@
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
+// Tailwind v4 does not use this file.
+// Content detection and configuration is handled automatically via @import "tailwindcss" in index.css.

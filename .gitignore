@@ -1,14 +1,23 @@
-# Large image datasets and vector index
+# Large image datasets — too big for git (download via download_flickr.py)
 data/images/
 data/index/
+data/captions.txt
+
+# FAISS index files
 *.index
 
 # Python artifacts
 __pycache__/
 *.pyc
-venv/
+*.pyo
 .env
+venv/
+.venv/
 
-# Frontend dependencies
+# Frontend dependencies and build output
 frontend/node_modules/
 frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -72,12 +72,23 @@ os.makedirs(settings.IMAGES_DIR, exist_ok=True)
 app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")
 
 @app.get("/health")
-def health():
+def health(response: __import__("fastapi").Response):
+    m_loaded = clip_service is not None
+    img_indexed = image_faiss.index.ntotal if image_faiss and hasattr(image_faiss, "index") and getattr(image_faiss.index, "ntotal", 0) > 0 else 0
+    cap_indexed = caption_faiss.index.ntotal if caption_faiss and hasattr(caption_faiss, "index") and getattr(caption_faiss.index, "ntotal", 0) > 0 else 0
+    map_loaded = bool(mapping and mapping.get("images") and mapping.get("captions"))
+    
+    is_healthy = m_loaded and img_indexed > 0 and cap_indexed > 0 and map_loaded
+    
+    if not is_healthy:
+        response.status_code = 503
+        
     return {
-        "status": "ok",
-        "model_loaded": clip_service is not None,
-        "images_indexed": image_faiss.index.ntotal if image_faiss and hasattr(image_faiss, "index") and image_faiss.index else 0,
-        "captions_indexed": caption_faiss.index.ntotal if caption_faiss and hasattr(caption_faiss, "index") and caption_faiss.index else 0,
+        "status": "ok" if is_healthy else "error",
+        "model_loaded": m_loaded,
+        "images_indexed": img_indexed,
+        "captions_indexed": cap_indexed,
+        "mapping_loaded": map_loaded,
     }
 
 

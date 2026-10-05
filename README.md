@@ -114,7 +114,7 @@ For a reproducible, one-click production environment, run:
 ```bash
 docker-compose up --build
 ```
-*(This maps the local `./data` folder directly into the container).*
+Note: You must download and ingest the Flickr30k dataset locally into the `data/` directory before running the Dockerized application, as Compose mounts `./data` to `/app/data`.
 
 ---
 
@@ -200,3 +200,4 @@ P42-Vector-Search/
 ## 🤝 Future Enhancements
 - **GPU Acceleration:** Upgrade from `faiss-cpu` to `faiss-gpu` for extreme scale indexing.
 - **Approximate Nearest Neighbors (ANN):** Currently, the system uses `IndexFlatIP` (exhaustive exact inner-product search), which is highly intentional given the manageable dataset scale (~31k). For datasets exceeding 1M+ vectors, a shift to HNSW (`IndexHNSW`) would provide sub-millisecond retrieval.
+

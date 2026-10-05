@@ -165,13 +165,13 @@ def test_empty_query():
     assert response.status_code == 400
     assert "empty" in response.json()["detail"].lower()
 
-@mock.patch('backend.main.Image.open')
-def test_oversized_image_dims_mocked(mock_open):
+@mock.patch('main.Image')
+def test_oversized_image_dims_mocked(mock_image):
     class MockImage:
         width = 10000
         height = 9000
         def convert(self, mode): return self
-    mock_open.return_value = MockImage()
+    mock_image.open.return_value = MockImage()
     
     response = client.post('/search/image', files={'file': ('test.jpg', b'fakebytes', 'image/jpeg')})
     assert response.status_code == 400

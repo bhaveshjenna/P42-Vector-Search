@@ -152,9 +152,10 @@ def search_image(file: UploadFile = File(...), exclude_near_duplicates: bool = F
         raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
     
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        image = Image.open(io.BytesIO(file_bytes))
         if image.width * image.height > 89478485:
             raise HTTPException(status_code=400, detail="Image dimensions are too large.")
+        image = image.convert("RGB")
     except HTTPException:
         raise
     except Exception as e:
@@ -199,9 +200,10 @@ def search_image_to_text(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
     
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        image = Image.open(io.BytesIO(file_bytes))
         if image.width * image.height > 89478485:
             raise HTTPException(status_code=400, detail="Image dimensions are too large.")
+        image = image.convert("RGB")
     except HTTPException:
         raise
     except Exception as e:

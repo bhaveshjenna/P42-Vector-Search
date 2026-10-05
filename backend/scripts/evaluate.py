@@ -145,6 +145,7 @@ def main():
     parser.add_argument("--sample-size", type=int, default=1000, help="Number of queries to sample (default: 1000)")
     parser.add_argument("--gallery-size", type=int, default=None, help="Restrict the search gallery to N images")
     parser.add_argument("--num-seeds", type=int, default=1, help="Number of seeds to average over")
+    parser.add_argument("--output-dir", type=str, default=None, help="Output directory for results (default: repo root)")
     args = parser.parse_args()
 
     logger.info("Loading CLIP model and indexes for evaluation...")
@@ -177,6 +178,8 @@ def main():
     if len(valid_img_ids) == 0:
         logger.error("No valid image-caption pairs found in mapping.")
         return
+
+    actual_gallery_size = min(args.gallery_size, len(valid_img_ids)) if args.gallery_size else len(valid_img_ids)
 
     # Extract all vectors so we can easily slice subsets
     all_image_vectors = image_faiss.index.reconstruct_n(0, image_faiss.index.ntotal)
@@ -220,7 +223,7 @@ def main():
     print("  EVALUATION RESULTS")
     print("=" * 60)
     print(f"  Queries evaluated per seed: {eval_t2i}")
-    print(f"  Gallery size:               {args.gallery_size if args.gallery_size else len(valid_img_ids)}")
+    print(f"  Gallery size:               {actual_gallery_size}")
     print(f"  Averaged over {args.num_seeds} seeds (starting from {args.seed})")
     print()
     print(f"  Text -> Image  (T2I)  [{eval_t2i} evaluated, {skip_t2i} skipped]")
@@ -245,8 +248,13 @@ def main():
     import transformers
     import faiss
     
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    out_dir = args.output_dir if args.output_dir else repo_root
+    if args.output_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
     # Save to JSON
-    json_path = os.path.join(os.path.dirname(__file__), "..", "..", f"results{file_suffix}.json")
+    json_path = os.path.join(out_dir, f"results{file_suffix}.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump({
             "meta": {
@@ -261,7 +269,7 @@ def main():
             "std": std_results
         }, f, indent=4)
     
-    md_path = os.path.join(os.path.dirname(__file__), "..", "..", f"results{file_suffix}.md")
+    md_path = os.path.join(out_dir, f"results{file_suffix}.md")
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(f"# Evaluation Results\n\n")
         f.write(f"- **Date:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -269,7 +277,7 @@ def main():
         f.write(f"- **Versions:** torch={torch.__version__}, transformers={transformers.__version__}, faiss={faiss.__version__}\n")
         f.write(f"- **Seeds:** {args.num_seeds} (starting from {args.seed})\n")
         f.write(f"- **Sample Size:** {eval_t2i}\n")
-        f.write(f"- **Gallery Size:** {args.gallery_size if args.gallery_size else len(valid_img_ids)}\n\n")
+        f.write(f"- **Gallery Size:** {actual_gallery_size}\n\n")
         
         f.write(f"### Text -> Image (T2I)\n")
         f.write(f"- **Missed Top 10:** {miss_t2i} (last run)\n")

@@ -1,14 +1,14 @@
-# Multimodal Vector Search Engine 🔍
+﻿# Multimodal Vector Search Engine 🔍
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.14-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi)
 ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)
 
-An academic and portfolio flagship project demonstrating state-of-the-art **Multimodal Information Retrieval** using **OpenAI's CLIP**, **Facebook AI Similarity Search (FAISS)**, and **FastAPI**. 
+An academic and portfolio flagship project demonstrating CLIP-based **Multimodal Information Retrieval** using **OpenAI's CLIP**, **Facebook AI Similarity Search (FAISS)**, and **FastAPI**. 
 
-This system indexes the 31,000+ image **Flickr30k dataset** and enables millisecond-latency cross-modal searches (Text-to-Image, Image-to-Image, and Image-to-Text).
+This system indexes the 31,000+ image **Flickr30k dataset** and enables cross-modal searches (Text-to-Image, Image-to-Image, and Image-to-Text).
 
 ---
 
@@ -19,7 +19,7 @@ This system indexes the 31,000+ image **Flickr30k dataset** and enables millisec
   - `Text → Image`: Type a semantic query ("dogs playing in snow") to find visually matching images.
   - `Image → Image`: Upload a photo to find visually and semantically similar images.
   - `Image → Text`: Upload an image to retrieve the most statistically probable ground-truth captions.
-- **High-Performance Batching:** Utilizes PyTorch tensor batching for 10x faster dataset ingestion and L2-normalized embedding generation.
+- **High-Performance Batching:** Utilizes PyTorch tensor batching for efficient dataset ingestion and L2-normalized embedding generation.
 - **Academic Evaluation Pipeline:** Built-in validation script (`evaluate.py`) to calculate standard IR metrics: **Recall@1, Recall@5, Recall@10, and Mean Reciprocal Rank (MRR)**.
 - **Developer-Focused UI:** A minimalist, dark-themed React + Tailwind v4 interface featuring real-time inference telemetry (Cosine Similarity, Latency, FAISS ID, and Embedding tensor previews).
 
@@ -45,7 +45,7 @@ This project uses the [Flickr30k dataset](https://www.kaggle.com/datasets/hsanke
 ## 🛠️ Installation & Setup
 
 ### 1. Prerequisites
-- Python 3.10+
+- Python 3.14
 - Node.js 18+
 - [Kaggle Account](https://www.kaggle.com/) (for dataset downloading)
 
@@ -127,7 +127,7 @@ This project is built for rigorous academic evaluation. To test the mathematical
 python backend/scripts/evaluate.py --gallery-size 1000 --num-seeds 3
 
 # Evaluate against the FULL 31k gallery
-python backend/scripts/evaluate.py --sample-size 1000
+python backend/scripts/evaluate.py --num-seeds 3
 ```
 
 ### Results (1K Gallery)
@@ -151,7 +151,7 @@ python backend/scripts/evaluate.py --sample-size 1000
 | **MRR** | 0.3078 ± 0.0165 | 0.5096 ± 0.0157 |
 
 ### Limitations
-- **Exact-ID Matching Understates Quality:** The evaluation uses strict exact-ID matching. Because Flickr30k contains many near-duplicate scenes, the semantic retrieval quality in practice is substantially higher than the raw exact-match metrics suggest.
+- **Exact-ID Matching Understates Quality:** The evaluation uses strict exact-ID matching. Because Flickr30k contains many near-duplicate scenes, the semantic retrieval quality in practice is likely higher than the raw exact-match metrics suggest.
 - **Incomparable Gallery Sizes:** The ~31K gallery numbers cannot be directly compared to published 1K test split benchmarks.
 - **Zero-Shot Model:** The CLIP model is used entirely zero-shot and has not been fine-tuned on the Flickr30k distribution.
 - **License Limitations:** Flickr30k is strictly licensed for non-commercial research use only.
@@ -165,7 +165,7 @@ python backend/scripts/evaluate.py --gallery-size 1000 --num-seeds 3
 # Full 31K gallery benchmark
 python backend/scripts/evaluate.py --num-seeds 3
 ```
-*(Exact evaluation details are automatically written to `results_1000.json` and `results_full.json`).*
+*(The run details (date, versions, seeds, sample and gallery size) are in `results_1000.md` and `results_full.md`.)*
 
 ---
 

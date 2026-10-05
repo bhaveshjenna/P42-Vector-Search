@@ -1,16 +1,14 @@
-# Large image datasets — too big for git (download via download_flickr.py)
-data/images/
-data/index/
-data/captions.txt
-
-# FAISS index files
+# Large data files and models
+data/
 *.index
 
 # Python artifacts
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 .env
+*.env
 venv/
 .venv/
 

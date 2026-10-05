@@ -104,14 +104,20 @@ def test_exclude_exact():
     assert res[0]["faiss_id"] == 1
     assert len(res) == 5
 
-    # Request with exclude_exact=True
+    # Request with exclude_exact=True (filter hits)
     response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
     assert response.status_code == 200
     res = response.json()["results"]
-    # The 0.9995 result should be skipped. 
-    # Mock returns: 0.9995, 0.95, 0.85, 0.75, 0.65, 0.55
-    # The first should now be 0.95
     assert res[0]["similarity_pct"] == "0.9500"
     assert res[0]["faiss_id"] == 2
-    # Because we requested k=6 and skipped 1, we still have 5 results
     assert len(res) == 5
+
+    # Mock where nothing exceeds 0.999
+    with mock.patch.object(main_app.image_faiss, "search", return_value=(np.array([0.99, 0.98, 0.97, 0.96, 0.95, 0.94]), np.array([1, 2, 3, 4, 5, 6]))):
+        response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
+        assert response.status_code == 200
+        res = response.json()["results"]
+        # Nothing is filtered, so it should still return exactly 5 elements.
+        assert len(res) == 5
+        assert res[0]["similarity_pct"] == "0.9900"
+        assert res[-1]["similarity_pct"] == "0.9500"

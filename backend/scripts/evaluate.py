@@ -31,13 +31,17 @@ def mean_reciprocal_rank(ranks: list) -> float:
 
 def evaluate_seed(seed: int, sample_size: int, gallery_size: int, valid_img_ids: list, images_map: dict, captions_map: dict, clip_service, all_image_vectors, all_caption_vectors):
     import faiss
+    import numpy as np
+    import torch
     random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     
     actual_gallery_size = min(gallery_size, len(valid_img_ids)) if gallery_size else len(valid_img_ids)
-    gallery_subset = set(random.sample(valid_img_ids, actual_gallery_size))
+    gallery_subset = set(random.sample(sorted(valid_img_ids), actual_gallery_size))
     
     actual_sample_size = min(sample_size, len(gallery_subset))
-    sampled_ids = random.sample(list(gallery_subset), actual_sample_size)
+    sampled_ids = random.sample(sorted(list(gallery_subset)), actual_sample_size)
     
     logger.info(f"[Seed {seed}] Evaluating on {actual_sample_size} queries against a gallery of {actual_gallery_size} images...")
 
@@ -62,6 +66,11 @@ def evaluate_seed(seed: int, sample_size: int, gallery_size: int, valid_img_ids:
     t2i_misses = 0
     i2t_misses = 0
     
+    import collections
+    img_to_caps = collections.defaultdict(list)
+    for cap_id, cap_data in captions_map.items():
+        img_to_caps[str(cap_data.get("image_id"))].append(cap_id)
+    
     for i, img_id in enumerate(sampled_ids):
         if i > 0 and i % 100 == 0:
             logger.info(f"[Seed {seed}] Progress: {i}/{actual_sample_size}")
@@ -72,8 +81,11 @@ def evaluate_seed(seed: int, sample_size: int, gallery_size: int, valid_img_ids:
 
         # --- Text-to-Image (T2I) ---
         try:
-            query_caption = random.choice(captions)
-            txt_emb = clip_service.get_text_embedding(query_caption)
+            img_cap_ids = img_to_caps.get(str(img_id), [])
+            if not img_cap_ids:
+                raise ValueError("No captions found")
+            chosen_cap_id = random.choice(sorted(img_cap_ids))
+            txt_emb = all_caption_vectors[int(chosen_cap_id)].reshape(1, -1)
             _, idxs = sub_image_faiss.search(txt_emb, k=10)
             
             hit_list = list(idxs[0])
@@ -88,8 +100,7 @@ def evaluate_seed(seed: int, sample_size: int, gallery_size: int, valid_img_ids:
 
         # --- Image-to-Text (I2T) ---
         try:
-            img = Image.open(img_path).convert("RGB")
-            img_emb = clip_service.get_image_embedding(img)
+            img_emb = all_image_vectors[int(img_id)].reshape(1, -1)
             _, idxs = sub_caption_faiss.search(img_emb, k=10)
 
             hit_rank = None

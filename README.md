@@ -1,4 +1,4 @@
-﻿# Multimodal Vector Search Engine 🔍
+# Multimodal Vector Search Engine 🔍
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
@@ -109,6 +109,7 @@ npm run dev
 ---
 
 ### 6. Docker Deployment (Optional)
+*(Note: The Docker deployment has not been tested locally as Docker is unverified/uninstalled on the host environment).*
 For a reproducible, one-click production environment, run:
 ```bash
 docker-compose up --build

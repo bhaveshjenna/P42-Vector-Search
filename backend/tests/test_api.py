@@ -87,8 +87,7 @@ def test_invalid_image():
     assert response.status_code == 400
     assert "invalid image" in response.json()["detail"].lower()
 
-def test_exclude_exact():
-    # Create valid 1x1 jpeg image bytes
+def test_exclude_exact_none_above_threshold():
     from PIL import Image
     import io
     img = Image.new("RGB", (1, 1), color="red")
@@ -96,28 +95,35 @@ def test_exclude_exact():
     img.save(buf, format="JPEG")
     valid_img = buf.getvalue()
 
-    # Normal request (include exact)
-    response = client.post("/search/image", files={"file": ("test.jpg", valid_img, "image/jpeg")})
-    assert response.status_code == 200
-    res = response.json()["results"]
-    assert res[0]["similarity_pct"] == "0.9995"
-    assert res[0]["faiss_id"] == 1
-    assert len(res) == 5
-
-    # Request with exclude_exact=True (filter hits)
-    response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
-    assert response.status_code == 200
-    res = response.json()["results"]
-    assert res[0]["similarity_pct"] == "0.9500"
-    assert res[0]["faiss_id"] == 2
-    assert len(res) == 5
-
-    # Mock where nothing exceeds 0.999
     with mock.patch.object(main_app.image_faiss, "search", return_value=(np.array([0.99, 0.98, 0.97, 0.96, 0.95, 0.94]), np.array([1, 2, 3, 4, 5, 6]))):
         response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
         assert response.status_code == 200
         res = response.json()["results"]
-        # Nothing is filtered, so it should still return exactly 5 elements.
         assert len(res) == 5
         assert res[0]["similarity_pct"] == "0.9900"
-        assert res[-1]["similarity_pct"] == "0.9500"
+        assert res[0]["faiss_id"] == 1
+
+def test_exclude_exact_above_threshold():
+    from PIL import Image
+    import io
+    img = Image.new("RGB", (1, 1), color="red")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    valid_img = buf.getvalue()
+
+    with mock.patch.object(main_app.image_faiss, "search", return_value=(np.array([0.9995, 0.95, 0.85, 0.75, 0.65, 0.55]), np.array([1, 2, 3, 4, 5, 6]))):
+        # exclude_exact=false
+        response = client.post("/search/image?exclude_exact=false", files={"file": ("test.jpg", valid_img, "image/jpeg")})
+        assert response.status_code == 200
+        res = response.json()["results"]
+        assert len(res) == 5
+        assert res[0]["similarity_pct"] == "0.9995"
+        assert res[0]["faiss_id"] == 1
+
+        # exclude_exact=true
+        response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
+        assert response.status_code == 200
+        res = response.json()["results"]
+        assert len(res) == 5
+        assert res[0]["similarity_pct"] == "0.9500"
+        assert res[0]["faiss_id"] == 2

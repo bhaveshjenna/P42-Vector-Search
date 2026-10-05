@@ -239,23 +239,29 @@ def main():
     print("=" * 60)
 
     file_suffix = f"_{args.gallery_size}" if args.gallery_size else "_full"
-    # Save to JSON
-    json_path = os.path.join(os.path.dirname(__file__), "..", "..", f"results{file_suffix}.json")
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump({
-            "avg": avg_results,
-            "std": std_results
-        }, f, indent=4)
-
-    # Save to Markdown
-    import datetime
-    md_path = os.path.join(os.path.dirname(__file__), "..", "..", f"results{file_suffix}.md")
     
-    # Extract versions
+    import datetime
     import torch
     import transformers
     import faiss
     
+    # Save to JSON
+    json_path = os.path.join(os.path.dirname(__file__), "..", "..", f"results{file_suffix}.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "meta": {
+                "date": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                "model_id": settings.MODEL_ID,
+                "versions": f"torch={torch.__version__}, transformers={transformers.__version__}, faiss={faiss.__version__}",
+                "seeds": f"{args.num_seeds} (starting from {args.seed})",
+                "sample_size": eval_t2i,
+                "gallery_size": actual_gallery_size
+            },
+            "avg": avg_results,
+            "std": std_results
+        }, f, indent=4)
+    
+    md_path = os.path.join(os.path.dirname(__file__), "..", "..", f"results{file_suffix}.md")
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(f"# Evaluation Results\n\n")
         f.write(f"- **Date:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")

@@ -71,7 +71,7 @@ def test_search_text():
     assert "results" in data
     assert len(data["results"]) == 5
     # verify raw cosine string format (e.g. "0.9995")
-    assert data["results"][0]["similarity_pct"] == "0.9995"
+    assert data["results"][0]["similarity"] == "0.9995"
     assert data["results"][0]["faiss_id"] == 1
 
 def test_upload_too_large():
@@ -87,7 +87,7 @@ def test_invalid_image():
     assert response.status_code == 400
     assert "invalid image" in response.json()["detail"].lower()
 
-def test_exclude_exact_none_above_threshold():
+def test_exclude_near_duplicates_none_above_threshold():
     from PIL import Image
     import io
     img = Image.new("RGB", (1, 1), color="red")
@@ -96,14 +96,14 @@ def test_exclude_exact_none_above_threshold():
     valid_img = buf.getvalue()
 
     with mock.patch.object(main_app.image_faiss, "search", return_value=(np.array([0.99, 0.98, 0.97, 0.96, 0.95, 0.94]), np.array([1, 2, 3, 4, 5, 6]))):
-        response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
+        response = client.post("/search/image?exclude_near_duplicates=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
         assert response.status_code == 200
         res = response.json()["results"]
         assert len(res) == 5
-        assert res[0]["similarity_pct"] == "0.9900"
+        assert res[0]["similarity"] == "0.9900"
         assert res[0]["faiss_id"] == 1
 
-def test_exclude_exact_above_threshold():
+def test_exclude_near_duplicates_above_threshold():
     from PIL import Image
     import io
     img = Image.new("RGB", (1, 1), color="red")
@@ -112,18 +112,50 @@ def test_exclude_exact_above_threshold():
     valid_img = buf.getvalue()
 
     with mock.patch.object(main_app.image_faiss, "search", return_value=(np.array([0.9995, 0.95, 0.85, 0.75, 0.65, 0.55]), np.array([1, 2, 3, 4, 5, 6]))):
-        # exclude_exact=false
-        response = client.post("/search/image?exclude_exact=false", files={"file": ("test.jpg", valid_img, "image/jpeg")})
+        # exclude_near_duplicates=false
+        response = client.post("/search/image?exclude_near_duplicates=false", files={"file": ("test.jpg", valid_img, "image/jpeg")})
         assert response.status_code == 200
         res = response.json()["results"]
         assert len(res) == 5
-        assert res[0]["similarity_pct"] == "0.9995"
+        assert res[0]["similarity"] == "0.9995"
         assert res[0]["faiss_id"] == 1
 
-        # exclude_exact=true
-        response = client.post("/search/image?exclude_exact=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
+        # exclude_near_duplicates=true
+        response = client.post("/search/image?exclude_near_duplicates=true", files={"file": ("test.jpg", valid_img, "image/jpeg")})
         assert response.status_code == 200
         res = response.json()["results"]
         assert len(res) == 5
-        assert res[0]["similarity_pct"] == "0.9500"
+        assert res[0]["similarity"] == "0.9500"
         assert res[0]["faiss_id"] == 2
+
+def test_health():
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["model_loaded"] is True
+    assert data["images_indexed"] == 100
+
+def test_empty_query():
+    response = client.post("/search/text", json={"query": "   "})
+    assert response.status_code == 400
+    assert "empty" in response.json()["detail"].lower()
+
+def test_oversized_image_dims():
+    from PIL import Image
+    import io
+    # Max safe dim is ~ 89478485 pixels. Let's make an image 10000x10000
+    # Wait, Image.new allocates memory. A 10000x10000 RGB image is 300MB.
+    # We can just mock PIL.Image.open to return an object with large width/height.
+    pass # we'll just mock it
+@mock.patch('backend.main.Image.open')
+def test_oversized_image_dims_mocked(mock_open):
+    class MockImage:
+        width = 10000
+        height = 9000
+        def convert(self, mode): return self
+    mock_open.return_value = MockImage()
+    
+    response = client.post('/search/image', files={'file': ('test.jpg', b'fakebytes', 'image/jpeg')})
+    assert response.status_code == 400
+    assert 'dimensions are too large' in response.json()['detail'].lower()

@@ -10,7 +10,7 @@ class SearchResponseItem(BaseModel):
     faiss_id: int
     filename: str
     image_url: str
-    similarity_pct: str
+    similarity: str
     latency_ms: float
     embedding_preview: str          # First 3 values of the 512-dim normalized embedding
     ground_truth_captions: List[str]

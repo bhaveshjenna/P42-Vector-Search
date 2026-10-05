@@ -61,7 +61,7 @@ app = FastAPI(title="Multimodal Image Search API", version="1.0.0", lifespan=lif
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(","),
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +70,16 @@ app.add_middleware(
 # Serve images as static files under /images
 os.makedirs(settings.IMAGES_DIR, exist_ok=True)
 app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "model_loaded": clip_service is not None,
+        "images_indexed": image_faiss.index.ntotal if image_faiss and hasattr(image_faiss, "index") and image_faiss.index else 0,
+        "captions_indexed": caption_faiss.index.ntotal if caption_faiss and hasattr(caption_faiss, "index") and caption_faiss.index else 0,
+    }
+
 
 
 def build_result(idx: int, dist: float, img_data: dict, embedding: "np.ndarray", latency_ms: float, matched_text: str = None) -> SearchResponseItem:
@@ -85,7 +95,7 @@ def build_result(idx: int, dist: float, img_data: dict, embedding: "np.ndarray",
         faiss_id=int(idx),
         filename=filename,
         image_url=image_url,
-        similarity_pct=f"{float(dist):.4f}",
+        similarity=f"{float(dist):.4f}",
         latency_ms=round(latency_ms, 2),
         embedding_preview=preview,
         ground_truth_captions=img_data.get("captions", []),
@@ -95,11 +105,14 @@ def build_result(idx: int, dist: float, img_data: dict, embedding: "np.ndarray",
 
 @app.post("/search/text", response_model=SearchResponse)
 def search_text(request: SearchTextRequest):
+    q = request.query.strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
     if image_faiss.index.ntotal == 0:
         raise HTTPException(status_code=503, detail="Image index is empty. Run ingest_data.py first.")
     try:
         t0 = time.perf_counter()
-        embedding = clip_service.get_text_embedding(request.query)
+        embedding = clip_service.get_text_embedding(q)
         infer_ms = (time.perf_counter() - t0) * 1000
 
         distances, indices = image_faiss.search(embedding, k=5)
@@ -115,11 +128,11 @@ def search_text(request: SearchTextRequest):
         return SearchResponse(results=results, total_latency_ms=round(total_ms, 2))
     except Exception as e:
         logger.exception(f"Error in /search/text: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error.")
 
 
 @app.post("/search/image", response_model=SearchResponse)
-def search_image(file: UploadFile = File(...), exclude_exact: bool = False):
+def search_image(file: UploadFile = File(...), exclude_near_duplicates: bool = False):
     if image_faiss.index.ntotal == 0:
         raise HTTPException(status_code=503, detail="Image index is empty. Run ingest_data.py first.")
     MAX_BYTES = 10 * 1024 * 1024
@@ -129,31 +142,40 @@ def search_image(file: UploadFile = File(...), exclude_exact: bool = False):
     
     try:
         image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-    except Exception:
+        if image.width * image.height > 89478485:
+            raise HTTPException(status_code=400, detail="Image dimensions are too large.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image processing error: {e}")
         raise HTTPException(status_code=400, detail="Invalid image file.")
 
-    t0 = time.perf_counter()
-    embedding = clip_service.get_image_embedding(image)
-    infer_ms = (time.perf_counter() - t0) * 1000
+    try:
+        t0 = time.perf_counter()
+        embedding = clip_service.get_image_embedding(image)
+        infer_ms = (time.perf_counter() - t0) * 1000
 
-    distances, indices = image_faiss.search(embedding, k=6 if exclude_exact else 5)
-    total_ms = (time.perf_counter() - t0) * 1000
+        distances, indices = image_faiss.search(embedding, k=6 if exclude_near_duplicates else 5)
+        total_ms = (time.perf_counter() - t0) * 1000
 
-    results = []
-    for dist, idx in zip(distances, indices):
-        if idx == -1:
-            continue
-        # NOTE: this only catches near-exact vector matches, not re-saved or resized copies
-        if exclude_exact and float(dist) > 0.999:
-            continue
+        results = []
+        for dist, idx in zip(distances, indices):
+            if idx == -1:
+                continue
+            # NOTE: this only catches near-exact vector matches, not re-saved or resized copies
+            if exclude_near_duplicates and float(dist) > 0.999:
+                continue
+                
+            img_data = mapping["images"].get(str(idx), {})
+            results.append(build_result(idx, dist, img_data, embedding[0], infer_ms))
             
-        img_data = mapping["images"].get(str(idx), {})
-        results.append(build_result(idx, dist, img_data, embedding[0], infer_ms))
-        
-        if len(results) == 5:
-            break
+            if len(results) == 5:
+                break
 
-    return SearchResponse(results=results, total_latency_ms=round(total_ms, 2))
+        return SearchResponse(results=results, total_latency_ms=round(total_ms, 2))
+    except Exception as e:
+        logger.exception(f"Error in /search/image: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
 
 
 @app.post("/search/image-to-text", response_model=SearchResponse)
@@ -167,23 +189,32 @@ def search_image_to_text(file: UploadFile = File(...)):
     
     try:
         image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-    except Exception:
+        if image.width * image.height > 89478485:
+            raise HTTPException(status_code=400, detail="Image dimensions are too large.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Image processing error: {e}")
         raise HTTPException(status_code=400, detail="Invalid image file.")
 
-    t0 = time.perf_counter()
-    embedding = clip_service.get_image_embedding(image)
-    infer_ms = (time.perf_counter() - t0) * 1000
+    try:
+        t0 = time.perf_counter()
+        embedding = clip_service.get_image_embedding(image)
+        infer_ms = (time.perf_counter() - t0) * 1000
 
-    distances, indices = caption_faiss.search(embedding, k=5)
-    total_ms = (time.perf_counter() - t0) * 1000
+        distances, indices = caption_faiss.search(embedding, k=5)
+        total_ms = (time.perf_counter() - t0) * 1000
 
-    results = []
-    for dist, idx in zip(distances, indices):
-        if idx == -1:
-            continue
-        cap_data = mapping["captions"].get(str(idx), {})
-        img_id = str(cap_data.get("image_id", -1))
-        img_data = mapping["images"].get(img_id, {})
-        results.append(build_result(idx, dist, img_data, embedding[0], infer_ms, matched_text=cap_data.get("text")))
+        results = []
+        for dist, idx in zip(distances, indices):
+            if idx == -1:
+                continue
+            cap_data = mapping["captions"].get(str(idx), {})
+            img_id = str(cap_data.get("image_id", -1))
+            img_data = mapping["images"].get(img_id, {})
+            results.append(build_result(idx, dist, img_data, embedding[0], infer_ms, matched_text=cap_data.get("text")))
 
-    return SearchResponse(results=results, total_latency_ms=round(total_ms, 2))
+        return SearchResponse(results=results, total_latency_ms=round(total_ms, 2))
+    except Exception as e:
+        logger.exception(f"Error in /search/image-to-text: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")

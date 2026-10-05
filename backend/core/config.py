@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     
     MODEL_ID: str = "openai/clip-vit-base-patch32"
     EMBEDDING_DIM: int = 512
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
     
     class Config:
         env_file = ".env"

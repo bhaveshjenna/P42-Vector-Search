@@ -14,11 +14,11 @@ This system indexes the 31,000+ image **Flickr30k dataset** and enables cross-mo
 
 ## 🚀 Key Features
 
-- **Dual-Index FAISS Architecture:** Maintains separate highly-optimized inner-product (`IndexFlatIP`) vector spaces for both 31k images and 158k text captions.
+- **Dual-Index FAISS Architecture:** Maintains separate exhaustive exact-search (`IndexFlatIP`) vector spaces for both 31k images and 158k text captions. At this scale, exact search is intentional for maximum accuracy.
 - **Cross-Modal Retrieval:** 
   - `Text → Image`: Type a semantic query ("dogs playing in snow") to find visually matching images.
   - `Image → Image`: Upload a photo to find visually and semantically similar images.
-  - `Image → Text`: Upload an image to retrieve the most statistically probable ground-truth captions.
+  - `Image → Text`: Upload an image to retrieve semantic captions.
 - **High-Performance Batching:** Utilizes PyTorch tensor batching for efficient dataset ingestion and L2-normalized embedding generation.
 - **Academic Evaluation Pipeline:** Built-in validation script (`evaluate.py`) to calculate standard IR metrics: **Recall@1, Recall@5, Recall@10, and Mean Reciprocal Rank (MRR)**.
 - **Developer-Focused UI:** A minimalist, dark-themed React + Tailwind v4 interface featuring real-time inference telemetry (Cosine Similarity, Latency, FAISS ID, and Embedding tensor previews).
@@ -131,7 +131,7 @@ python backend/scripts/evaluate.py --num-seeds 3
 ```
 
 ### Results (1K Gallery)
-*(Evaluated using `--gallery-size 1000 --num-seeds 3`. This restricts retrieval to a 1,000-image subset, simulating standard literature benchmarks).*
+*(Evaluated using `--gallery-size 1000 --num-seeds 3`. This restricts retrieval to a 1,000-image subset, drawing queries from within that subset to form a Random 1K Gallery Benchmark).*
 
 | Metric | Text -> Image (T2I) | Image -> Text (I2T) |
 |---|---|---|

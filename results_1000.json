@@ -1,4 +1,12 @@
 {
+    "meta": {
+        "date": "2026-10-05 18:02:29",
+        "model_id": "openai/clip-vit-base-patch32",
+        "versions": "torch=2.11.0+cpu, transformers=5.17.0, faiss=1.15.1",
+        "seeds": "3 (starting from 42)",
+        "sample_size": 1000,
+        "gallery_size": 1000
+    },
     "avg": {
         "t2i_r1": 0.5676666666666667,
         "t2i_r5": 0.8253333333333334,

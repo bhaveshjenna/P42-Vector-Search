@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import './index.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -163,7 +163,7 @@ function App() {
                 )}
                 <p className="text-sm text-gray-300 truncate font-medium">{r.filename}</p>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs font-mono text-gray-500">
-                  <span>Cosine similarity: <span className="text-green-400">{r.similarity_pct}</span></span>
+                  <span>Cosine similarity: <span className="text-green-400">{r.similarity}</span></span>
                   <span>FAISS ID: <span className="text-indigo-400">{r.faiss_id}</span></span>
                   <span>Latency: <span className="text-amber-400">{r.latency_ms.toFixed(1)}ms</span></span>
                   <span className="truncate max-w-xs" title={`[${r.embedding_preview}]`}>
@@ -214,7 +214,7 @@ function App() {
             <div className="flex flex-col gap-3 text-xs font-mono mb-6 border border-gray-800 rounded-lg p-4 bg-gray-900">
               <div className="flex justify-between">
                 <span className="text-gray-500">Cosine Similarity</span>
-                <span className="text-green-400 font-bold">{selectedItem.similarity_pct}</span>
+                <span className="text-green-400 font-bold">{selectedItem.similarity}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">FAISS Index ID</span>

@@ -27,13 +27,13 @@ class CLIPService:
         """
         if isinstance(features, torch.Tensor):
             return features
-        # transformers >= 5.x: get_text_features / get_image_features returns an object
         if hasattr(features, "pooler_output") and features.pooler_output is not None:
             return features.pooler_output
-        if hasattr(features, "last_hidden_state"):
-            # fallback: use the [CLS] token (index 0)
-            return features.last_hidden_state[:, 0, :]
-        raise ValueError(f"Cannot extract tensor from model output: {type(features)}")
+            
+        raise ValueError(
+            "Expected a raw torch.Tensor or a BaseModelOutputWithPooling (transformers 5.x), "
+            f"but got {type(features)}. Unable to extract valid embeddings."
+        )
 
     def _normalize(self, features) -> np.ndarray:
         """Extract, L2-normalize, and return as float32 numpy array of shape (N, 512)."""

@@ -163,7 +163,7 @@ function App() {
                 )}
                 <p className="text-sm text-gray-300 truncate font-medium">{r.filename}</p>
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs font-mono text-gray-500">
-                  <span>Similarity: <span className="text-green-400">{r.similarity_pct}</span></span>
+                  <span>Cosine similarity: <span className="text-green-400">{r.similarity_pct}</span></span>
                   <span>FAISS ID: <span className="text-indigo-400">{r.faiss_id}</span></span>
                   <span>Latency: <span className="text-amber-400">{r.latency_ms.toFixed(1)}ms</span></span>
                   <span className="truncate max-w-xs" title={`[${r.embedding_preview}]`}>

@@ -61,13 +61,14 @@ app = FastAPI(title="Multimodal Image Search API", version="1.0.0", lifespan=lif
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Serve images as static files under /images
+os.makedirs(settings.IMAGES_DIR, exist_ok=True)
 app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")
 
 
@@ -84,7 +85,7 @@ def build_result(idx: int, dist: float, img_data: dict, embedding: "np.ndarray",
         faiss_id=int(idx),
         filename=filename,
         image_url=image_url,
-        similarity_pct=f"{max(0.0, float(dist)) * 100:.1f}%",
+        similarity_pct=f"{float(dist):.4f}",
         latency_ms=round(latency_ms, 2),
         embedding_preview=preview,
         ground_truth_captions=img_data.get("captions", []),
@@ -118,25 +119,39 @@ def search_text(request: SearchTextRequest):
 
 
 @app.post("/search/image", response_model=SearchResponse)
-def search_image(file: UploadFile = File(...)):
+def search_image(file: UploadFile = File(...), exclude_exact: bool = False):
     if image_faiss.index.ntotal == 0:
         raise HTTPException(status_code=503, detail="Image index is empty. Run ingest_data.py first.")
-
-    image = Image.open(io.BytesIO(file.file.read())).convert("RGB")
+    MAX_BYTES = 10 * 1024 * 1024
+    file_bytes = file.file.read(MAX_BYTES + 1)
+    if len(file_bytes) > MAX_BYTES:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
+    
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image file.")
 
     t0 = time.perf_counter()
     embedding = clip_service.get_image_embedding(image)
     infer_ms = (time.perf_counter() - t0) * 1000
 
-    distances, indices = image_faiss.search(embedding, k=5)
+    distances, indices = image_faiss.search(embedding, k=6 if exclude_exact else 5)
     total_ms = (time.perf_counter() - t0) * 1000
 
     results = []
     for dist, idx in zip(distances, indices):
         if idx == -1:
             continue
+        # NOTE: this only catches near-exact vector matches, not re-saved or resized copies
+        if exclude_exact and float(dist) > 0.999:
+            continue
+            
         img_data = mapping["images"].get(str(idx), {})
         results.append(build_result(idx, dist, img_data, embedding[0], infer_ms))
+        
+        if len(results) == 5:
+            break
 
     return SearchResponse(results=results, total_latency_ms=round(total_ms, 2))
 
@@ -145,8 +160,15 @@ def search_image(file: UploadFile = File(...)):
 def search_image_to_text(file: UploadFile = File(...)):
     if caption_faiss.index.ntotal == 0:
         raise HTTPException(status_code=503, detail="Caption index is empty. Run ingest_data.py first.")
-
-    image = Image.open(io.BytesIO(file.file.read())).convert("RGB")
+    MAX_BYTES = 10 * 1024 * 1024
+    file_bytes = file.file.read(MAX_BYTES + 1)
+    if len(file_bytes) > MAX_BYTES:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
+    
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image file.")
 
     t0 = time.perf_counter()
     embedding = clip_service.get_image_embedding(image)

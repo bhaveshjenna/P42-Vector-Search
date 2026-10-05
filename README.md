@@ -1,4 +1,4 @@
-# Multimodal Vector Search Engine 🔍
+﻿# Multimodal Vector Search Engine 🔍
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
@@ -134,20 +134,20 @@ python backend/scripts/evaluate.py --sample-size 1000
 
 | Metric | Text -> Image (T2I) | Image -> Text (I2T) |
 |---|---|---|
-| **Recall@1** | 0.5730 ± 0.0176 | 0.8040 ± 0.0108 |
-| **Recall@5** | 0.8323 ± 0.0060 | 0.9567 ± 0.0054 |
-| **Recall@10** | 0.9070 ± 0.0094 | 0.9807 ± 0.0041 |
-| **MRR** | 0.6862 ± 0.0140 | 0.8688 ± 0.0087 |
+| **Recall@1** | 0.5813 ± 0.0162 | 0.8040 ± 0.0108 |
+| **Recall@5** | 0.8337 ± 0.0012 | 0.9567 ± 0.0054 |
+| **Recall@10** | 0.9063 ± 0.0090 | 0.9807 ± 0.0041 |
+| **MRR** | 0.6901 ± 0.0107 | 0.8688 ± 0.0087 |
 
 ### Results (Full ~31K Gallery)
 *(Evaluated using 1,000 randomly sampled queries against the entire ~31,783-image gallery. **This is fundamentally harder than the standard 1k test split**, so these results are strictly lower and not directly comparable to published numbers).*
 
 | Metric | Text -> Image (T2I) | Image -> Text (I2T) |
 |---|---|---|
-| **Recall@1** | 0.2130 | 0.3940 |
-| **Recall@5** | 0.3730 | 0.6040 |
-| **Recall@10** | 0.4660 | 0.6940 |
-| **MRR** | 0.2839 | 0.4837 |
+| **Recall@1** | 0.2277 ± 0.0132 | 0.4047 ± 0.0038 |
+| **Recall@5** | 0.4153 ± 0.0045 | 0.6507 ± 0.0059 |
+| **Recall@10** | 0.5053 ± 0.0192 | 0.7393 ± 0.0071 |
+| **MRR** | 0.3101 ± 0.0047 | 0.5106 ± 0.0033 |
 
 ### Limitations
 - **Exact-ID Matching Understates Quality:** The evaluation uses strict exact-ID matching. Because Flickr30k contains many near-duplicate scenes, the semantic retrieval quality in practice is substantially higher than the raw exact-match metrics suggest.

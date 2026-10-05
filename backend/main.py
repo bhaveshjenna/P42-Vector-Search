@@ -4,7 +4,7 @@ import time
 import logging
 import urllib.parse
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -72,7 +72,7 @@ os.makedirs(settings.IMAGES_DIR, exist_ok=True)
 app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")
 
 @app.get("/health")
-def health(response: __import__("fastapi").Response):
+def health(response: Response):
     m_loaded = clip_service is not None
     img_indexed = image_faiss.index.ntotal if image_faiss and hasattr(image_faiss, "index") and getattr(image_faiss.index, "ntotal", 0) > 0 else 0
     cap_indexed = caption_faiss.index.ntotal if caption_faiss and hasattr(caption_faiss, "index") and getattr(caption_faiss.index, "ntotal", 0) > 0 else 0

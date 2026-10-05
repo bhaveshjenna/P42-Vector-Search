@@ -128,26 +128,43 @@ def test_exclude_near_duplicates_above_threshold():
         assert res[0]["similarity"] == "0.9500"
         assert res[0]["faiss_id"] == 2
 
-def test_health():
+def test_health_healthy():
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
     assert data["model_loaded"] is True
     assert data["images_indexed"] == 100
+    assert data["captions_indexed"] == 100
+    assert data["mapping_loaded"] is True
+
+def test_health_unhealthy_missing_index():
+    import main as main_app
+    old_faiss = main_app.image_faiss
+    class MockEmptyFAISS:
+        class MockEmptyFAISSIndex:
+            @property
+            def ntotal(self):
+                return 0
+        def __init__(self):
+            self.index = self.MockEmptyFAISSIndex()
+            
+    main_app.image_faiss = MockEmptyFAISS()
+    try:
+        response = client.get("/health")
+        assert response.status_code == 503
+        data = response.json()
+        assert data["status"] == "error"
+        assert data["images_indexed"] == 0
+        assert data["mapping_loaded"] is True
+    finally:
+        main_app.image_faiss = old_faiss
 
 def test_empty_query():
     response = client.post("/search/text", json={"query": "   "})
     assert response.status_code == 400
     assert "empty" in response.json()["detail"].lower()
 
-def test_oversized_image_dims():
-    from PIL import Image
-    import io
-    # Max safe dim is ~ 89478485 pixels. Let's make an image 10000x10000
-    # Wait, Image.new allocates memory. A 10000x10000 RGB image is 300MB.
-    # We can just mock PIL.Image.open to return an object with large width/height.
-    pass # we'll just mock it
 @mock.patch('backend.main.Image.open')
 def test_oversized_image_dims_mocked(mock_open):
     class MockImage:
@@ -159,3 +176,4 @@ def test_oversized_image_dims_mocked(mock_open):
     response = client.post('/search/image', files={'file': ('test.jpg', b'fakebytes', 'image/jpeg')})
     assert response.status_code == 400
     assert 'dimensions are too large' in response.json()['detail'].lower()
+

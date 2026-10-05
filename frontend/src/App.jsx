@@ -47,7 +47,14 @@ function App() {
         fd.append('file', imageFile)
         res = await fetch(`${API_URL}/search/image-to-text`, { method: 'POST', body: fd })
       }
-      if (!res.ok) throw new Error(res.statusText)
+      if (!res.ok) {
+        let errMsg = res.statusText
+        try {
+          const errData = await res.json()
+          if (errData.detail) errMsg = errData.detail
+        } catch (e) {}
+        throw new Error(errMsg)
+      }
       const data = await res.json()
       setResults(data.results)
       setLatency(data.total_latency_ms)

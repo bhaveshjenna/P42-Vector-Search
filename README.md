@@ -46,7 +46,7 @@ This project uses the [Flickr30k dataset](https://www.kaggle.com/datasets/hsanke
 
 ### 1. Prerequisites
 - Python 3.14
-- Node.js 18+
+- Node.js 20+
 - [Kaggle Account](https://www.kaggle.com/) (for dataset downloading)
 
 ### 2. Clone the Repository
@@ -69,6 +69,7 @@ Download the dataset and generate the FAISS vectors. *(Note: Full ingestion take
 
 ```bash
 # 1. Download Flickr30k from Kaggle (Requires Kaggle API token in ~/.kaggle/kaggle.json)
+pip install -r requirements-data.txt
 python download_flickr.py
 
 # 2. Dry run (Test the pipeline on just 100 images)
@@ -109,7 +110,6 @@ npm run dev
 ---
 
 ### 6. Docker Deployment (Optional)
-*(Note: the Docker setup has not been tested yet.)*
 For a reproducible, one-click production environment, run:
 ```bash
 docker-compose up --build

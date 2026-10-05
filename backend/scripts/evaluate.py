@@ -10,7 +10,6 @@ from PIL import Image
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.config import settings
-from services.clip_service import CLIPService
 from services.faiss_service import FAISSService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -29,7 +28,7 @@ def mean_reciprocal_rank(ranks: list) -> float:
     return sum(1.0 / r for r in ranks) / len(ranks)
 
 
-def evaluate_seed(seed: int, sample_size: int, gallery_size: int, valid_img_ids: list, images_map: dict, captions_map: dict, clip_service, all_image_vectors, all_caption_vectors):
+def evaluate_seed(seed: int, sample_size: int, gallery_size: int, valid_img_ids: list, images_map: dict, captions_map: dict, all_image_vectors, all_caption_vectors):
     import faiss
     import numpy as np
     import torch
@@ -148,9 +147,7 @@ def main():
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory for results (default: repo root)")
     args = parser.parse_args()
 
-    logger.info("Loading CLIP model and indexes for evaluation...")
-
-    clip_service = CLIPService(settings.MODEL_ID)
+    logger.info("Loading FAISS indexes for evaluation...")
 
     for path, label in [
         (settings.IMAGES_INDEX_FILE, "images.index"),
@@ -196,7 +193,6 @@ def main():
             valid_img_ids, 
             images_map, 
             captions_map, 
-            clip_service, 
             all_image_vectors, 
             all_caption_vectors
         )
